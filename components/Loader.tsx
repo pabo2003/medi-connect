@@ -1,95 +1,19 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import React from "react";
-import { useRouter, useSegments } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React from "react"
+import { View, ActivityIndicator } from "react-native"
 
-// Define the Tab type
-type Tab = {
-  label: string;
-  path: string;
-  icon: keyof typeof Ionicons.glyphMap;
-};
+interface LoaderProps {
+  visible: boolean
+}
 
-const tabs: Tab[] = [
-  { label: "Home", path: "/home", icon: "home" },
-  { label: "Medicines", path: "/medicines", icon: "medical" },
-  { label: "Packages", path: "/packages", icon: "bag" },
-  { label: "Wellness", path: "/wellness", icon: "heart" },
-  { label: "Account", path: "/account", icon: "person" }
-] as const;
+const Loader: React.FC<LoaderProps> = ({ visible }) => {
+  if (!visible) return null
 
-const FooterNav = () => {
-  const router = useRouter();
-  const segment = useSegments();
-  const activeRouter = "/" + (segment[0] || "");
-
+  // inset-0 = top-0 + left-0 + right-0 + bottom-0
   return (
-    <View style={styles.container}>
-      {tabs.map((data) => (
-        <Pressable
-          key={data.path}
-          style={[
-            styles.tabButton,
-            data.path === activeRouter && styles.activeTabButton
-          ]}
-          onPress={() => {
-            router.push(data.path as any);
-          }}
-        >
-          <Ionicons 
-            name={data.icon} 
-            size={24} 
-            color={data.path === activeRouter ? "#fff" : "#7226ff"} 
-          />
-          <Text style={[
-            styles.tabText,
-            data.path === activeRouter && styles.activeTabText
-          ]}>
-            {data.label}
-          </Text>
-        </Pressable>
-      ))}
+    <View className="absolute inset-0 bg-black/50 items-center justify-center z-50">
+      <ActivityIndicator size="large" color="#fff" />
     </View>
-  );
-};
+  )
+}
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  tabButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  activeTabButton: {
-    backgroundColor: '#7226ff',
-  },
-  tabText: {
-    fontSize: 12,
-    marginTop: 4,
-    color: '#7226ff',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#fff',
-  },
-});
-
-export default FooterNav;
+export default Loader

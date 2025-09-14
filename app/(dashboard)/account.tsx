@@ -1,12 +1,12 @@
 import { View, Text } from "react-native"
 import React from "react"
 
-const SettingScreen = () => {
+const Account = () => {
   return (
     <View className="flex-1 justify-center align-items-center">
-      <Text className="text-4xl">Setting Screen</Text>
+      <Text className="text-4xl">Hello user</Text>
     </View>
   )
 }
 
-export default SettingScreen
+export default Account
