@@ -1,45 +1,62 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, FlatList, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, FlatList, StyleSheet, Modal } from "react-native";
 import React, { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
+
+// Define TypeScript interfaces
+interface UserData {
+  name: string;
+  email: string;
+  phone: string;
+  age: string;
+  address: string;
+}
+
+interface FamilyMember {
+  id: string;
+  name: string;
+  age: string;
+  relationship: string;
+  healthConditions: string[];
+}
+
+interface NewMember {
+  name: string;
+  age: string;
+  relationship: string;
+  healthConditions: string;
+}
 
 const Account = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [editing, setEditing] = useState(false);
   const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&h=150&fit=crop&crop=face");
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   
-  // User profile data
-  const [userData, setUserData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    age: "35",
-    address: "123 Health Street, Medical City",
+  // User profile data - empty initially
+  const [userData, setUserData] = useState<UserData>({
+    name: "",
+    email: "",
+    phone: "",
+    age: "",
+    address: "",
   });
 
-  // Family members data
-  const [familyMembers, setFamilyMembers] = useState([
-    {
-      id: "1",
-      name: "Sarah Doe",
-      age: "32",
-      relationship: "Spouse",
-      healthConditions: ["None"],
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    },
-    {
-      id: "2",
-      name: "Emma Doe",
-      age: "8",
-      relationship: "Daughter",
-      healthConditions: ["Asthma", "Allergies"],
-      image: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=100&h=100&fit=crop&crop=face",
-    },
-  ]);
+  // Family members data - empty initially
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   // New family member form
-  const [newMember, setNewMember] = useState({
+  const [newMember, setNewMember] = useState<NewMember>({
+    name: "",
+    age: "",
+    relationship: "",
+    healthConditions: "",
+  });
+
+  // Edit form state
+  const [editForm, setEditForm] = useState<NewMember>({
     name: "",
     age: "",
     relationship: "",
@@ -61,35 +78,61 @@ const Account = () => {
   };
 
   // Handle input changes
-interface UserData {
-    name: string;
-    email: string;
-    phone: string;
-    age: string;
-    address: string;
-}
-
-const handleInputChange = (field: keyof UserData, value: string): void => {
+  const handleInputChange = (field: keyof UserData, value: string): void => {
     setUserData({
-        ...userData,
-        [field]: value,
+      ...userData,
+      [field]: value,
     });
-};
+  };
 
   // Handle new member input changes
-interface NewMember {
-    name: string;
-    age: string;
-    relationship: string;
-    healthConditions: string;
-}
-
-const handleNewMemberChange = (field: keyof NewMember, value: string): void => {
+  const handleNewMemberChange = (field: keyof NewMember, value: string): void => {
     setNewMember({
-        ...newMember,
-        [field]: value
+      ...newMember,
+      [field]: value
     });
-};
+  };
+
+  // Handle edit form changes
+  const handleEditFormChange = (field: keyof NewMember, value: string): void => {
+    setEditForm({
+      ...editForm,
+      [field]: value
+    });
+  };
+
+  // Save user data
+  const saveUserData = () => {
+    // Validate required fields
+    if (!userData.name || !userData.email || !userData.phone) {
+      Alert.alert("Error", "Please fill in all required fields (Name, Email, Phone)");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      Alert.alert("Error", "Please enter a valid email address");
+      return;
+    }
+
+    // Validate phone number (basic validation)
+    if (userData.phone.length < 10) {
+      Alert.alert("Error", "Please enter a valid phone number");
+      return;
+    }
+
+    // Validate age
+    const ageAsNumber = parseInt(userData.age);
+    if (userData.age && (isNaN(ageAsNumber) || ageAsNumber < 0 || ageAsNumber > 150)) {
+      Alert.alert("Error", "Please enter a valid age");
+      return;
+    }
+
+    // Save data
+    Alert.alert("Success", "Profile updated successfully!");
+    setEditing(false);
+  };
 
   // Add new family member
   const addFamilyMember = () => {
@@ -98,13 +141,12 @@ const handleNewMemberChange = (field: keyof NewMember, value: string): void => {
       return;
     }
 
-    const newMemberObj = {
+    const newMemberObj: FamilyMember = {
       id: Date.now().toString(),
       name: newMember.name,
       age: newMember.age,
       relationship: newMember.relationship,
-      healthConditions: newMember.healthConditions ? newMember.healthConditions.split(",") : [],
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face",
+      healthConditions: newMember.healthConditions ? newMember.healthConditions.split(",").map(item => item.trim()) : [],
     };
 
     setFamilyMembers([...familyMembers, newMemberObj]);
@@ -112,53 +154,104 @@ const handleNewMemberChange = (field: keyof NewMember, value: string): void => {
     Alert.alert("Success", "Family member added successfully");
   };
 
-  // Delete family member
-interface FamilyMember {
-    id: string;
-    name: string;
-    age: string;
-    relationship: string;
-    healthConditions: string[];
-    image: string;
-}
+  // Edit family member
+  const editFamilyMember = (member: FamilyMember) => {
+    setEditingMember(member);
+    setEditForm({
+      name: member.name,
+      age: member.age,
+      relationship: member.relationship,
+      healthConditions: member.healthConditions.join(", "),
+    });
+    setIsEditModalVisible(true);
+  };
 
-const deleteFamilyMember = (id: string): void => {
-    Alert.alert(
-        "Confirm Delete",
-        "Are you sure you want to remove this family member?",
-        [
-            { text: "Cancel", style: "cancel" },
-            { 
-                text: "Delete", 
-                style: "destructive",
-                onPress: () => {
-                    setFamilyMembers(familyMembers.filter((member: FamilyMember) => member.id !== id));
-                    Alert.alert("Success", "Family member removed");
-                }
-            }
-        ]
+  // Save edited family member
+  const saveEditedMember = () => {
+    if (!editingMember) return;
+
+    if (!editForm.name || !editForm.age || !editForm.relationship) {
+      Alert.alert("Error", "Please fill in all required fields");
+      return;
+    }
+
+    const updatedMembers = familyMembers.map(member => 
+      member.id === editingMember.id 
+        ? {
+            ...member,
+            name: editForm.name,
+            age: editForm.age,
+            relationship: editForm.relationship,
+            healthConditions: editForm.healthConditions ? editForm.healthConditions.split(",").map(item => item.trim()) : [],
+          }
+        : member
     );
-};
 
-  // Render family member item
-  const renderFamilyMember = ({ item }: { item: { id: string; name: string; age: string; relationship: string; healthConditions: string[]; image: string; } }) => (
-    <View style={styles.memberCard}>
-      <Image source={{ uri: item.image }} style={styles.memberImage} />
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{item.name}</Text>
-        <Text style={styles.memberDetails}>{item.age} years • {item.relationship}</Text>
-        {item.healthConditions.length > 0 && (
-          <Text style={styles.healthConditions}>
-            Health: {item.healthConditions.join(", ")}
-          </Text>
-        )}
+    setFamilyMembers(updatedMembers);
+    setIsEditModalVisible(false);
+    setEditingMember(null);
+    Alert.alert("Success", "Family member updated successfully");
+  };
+
+  // Delete family member
+  const deleteFamilyMember = (id: string): void => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to remove this family member?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: () => {
+            setFamilyMembers(familyMembers.filter(member => member.id !== id));
+            Alert.alert("Success", "Family member removed");
+          }
+        }
+      ]
+    );
+  };
+
+  // Render family member as table row
+  const renderFamilyMember = ({ item }: { item: FamilyMember }) => (
+    <View style={styles.memberRow}>
+      {/* Name Column */}
+      <View style={styles.column}>
+        <Text style={styles.columnText}>{item.name}</Text>
       </View>
-      <TouchableOpacity 
-        style={styles.deleteButton}
-        onPress={() => deleteFamilyMember(item.id)}
-      >
-        <Ionicons name="trash" size={20} color="#ff3b30" />
-      </TouchableOpacity>
+      
+      {/* Age Column */}
+      <View style={styles.column}>
+        <Text style={styles.columnText}>{item.age} years</Text>
+      </View>
+      
+      {/* Relationship Column */}
+      <View style={styles.column}>
+        <Text style={styles.columnText}>{item.relationship}</Text>
+      </View>
+      
+      {/* Health Conditions Column */}
+      <View style={[styles.column, styles.healthColumn]}>
+        <Text style={styles.columnText} numberOfLines={2}>
+          {item.healthConditions.join(", ") || "None"}
+        </Text>
+      </View>
+      
+      {/* Actions Column */}
+      <View style={styles.actionsColumn}>
+        <TouchableOpacity 
+          style={styles.smallEditButton}
+          onPress={() => editFamilyMember(item)}
+        >
+          <Ionicons name="pencil" size={16} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => deleteFamilyMember(item.id)}
+        >
+          <Ionicons name="trash" size={16} color="#ff3b30" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -215,7 +308,7 @@ const deleteFamilyMember = (id: string): void => {
             {/* Edit Button */}
             <TouchableOpacity 
               style={styles.editButton}
-              onPress={() => setEditing(!editing)}
+              onPress={() => editing ? saveUserData() : setEditing(true)}
             >
               <Text style={styles.editButtonText}>
                 {editing ? "Save Changes" : "Edit Profile"}
@@ -225,34 +318,37 @@ const deleteFamilyMember = (id: string): void => {
             {/* Profile Form */}
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={userData.name}
                   onChangeText={(text) => handleInputChange("name", text)}
                   editable={editing}
+                  placeholder="Enter your full name"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Email *</Text>
                 <TextInput
                   style={styles.input}
                   value={userData.email}
                   onChangeText={(text) => handleInputChange("email", text)}
                   editable={editing}
                   keyboardType="email-address"
+                  placeholder="Enter your email"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>Phone Number *</Text>
                 <TextInput
                   style={styles.input}
                   value={userData.phone}
                   onChangeText={(text) => handleInputChange("phone", text)}
                   editable={editing}
                   keyboardType="phone-pad"
+                  placeholder="Enter your phone number"
                 />
               </View>
 
@@ -264,6 +360,7 @@ const deleteFamilyMember = (id: string): void => {
                   onChangeText={(text) => handleInputChange("age", text)}
                   editable={editing}
                   keyboardType="numeric"
+                  placeholder="Enter your age"
                 />
               </View>
 
@@ -275,6 +372,7 @@ const deleteFamilyMember = (id: string): void => {
                   onChangeText={(text) => handleInputChange("address", text)}
                   editable={editing}
                   multiline
+                  placeholder="Enter your address"
                 />
               </View>
             </View>
@@ -291,14 +389,14 @@ const deleteFamilyMember = (id: string): void => {
               
               <TextInput
                 style={styles.input}
-                placeholder="Full Name"
+                placeholder="Full Name *"
                 value={newMember.name}
                 onChangeText={(text) => handleNewMemberChange("name", text)}
               />
               
               <TextInput
                 style={styles.input}
-                placeholder="Age"
+                placeholder="Age *"
                 value={newMember.age}
                 onChangeText={(text) => handleNewMemberChange("age", text)}
                 keyboardType="numeric"
@@ -306,7 +404,7 @@ const deleteFamilyMember = (id: string): void => {
               
               <TextInput
                 style={styles.input}
-                placeholder="Relationship (e.g., Spouse, Child)"
+                placeholder="Relationship * (e.g., Spouse, Child)"
                 value={newMember.relationship}
                 onChangeText={(text) => handleNewMemberChange("relationship", text)}
               />
@@ -324,16 +422,45 @@ const deleteFamilyMember = (id: string): void => {
               </TouchableOpacity>
             </View>
 
-            {/* Family Members List */}
-            <FlatList
-              data={familyMembers}
-              renderItem={renderFamilyMember}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>No family members added yet.</Text>
-              }
-            />
+            {/* Family Members Table */}
+            {familyMembers.length > 0 ? (
+              <View style={styles.tableContainer}>
+                {/* Table Header */}
+                <View style={styles.tableHeader}>
+                  <View style={styles.headerColumn}>
+                    <Text style={styles.headerColumnText}>Name</Text>
+                  </View>
+                  <View style={styles.headerColumn}>
+                    <Text style={styles.headerColumnText}>Age</Text>
+                  </View>
+                  <View style={styles.headerColumn}>
+                    <Text style={styles.headerColumnText}>Relationship</Text>
+                  </View>
+                  <View style={[styles.headerColumn, styles.healthColumn]}>
+                    <Text style={styles.headerColumnText}>Health Conditions</Text>
+                  </View>
+                  <View style={{ width: 80 }}>
+                    <Text style={styles.headerColumnText}>Actions</Text>
+                  </View>
+                </View>
+                
+                {/* Table Body */}
+                <FlatList
+                  data={familyMembers}
+                  renderItem={renderFamilyMember}
+                  keyExtractor={item => item.id}
+                  scrollEnabled={false}
+                />
+              </View>
+            ) : (
+              <View style={styles.emptyTable}>
+                <Ionicons name="people-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyTableText}>No family members added yet</Text>
+                <Text style={styles.emptyTableSubtext}>
+                  Add family members using the form above to get started
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -353,10 +480,75 @@ const deleteFamilyMember = (id: string): void => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.comingSoon}>More prescription features coming soon...</Text>
+            <View style={styles.emptyTable}>
+              <Ionicons name="document-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyTableText}>No prescriptions uploaded yet</Text>
+              <Text style={styles.emptyTableSubtext}>
+                Upload prescriptions to manage them here
+              </Text>
+            </View>
           </View>
         )}
       </ScrollView>
+
+      {/* Edit Family Member Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Family Member</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name *"
+              value={editForm.name}
+              onChangeText={(text) => handleEditFormChange("name", text)}
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Age *"
+              value={editForm.age}
+              onChangeText={(text) => handleEditFormChange("age", text)}
+              keyboardType="numeric"
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Relationship *"
+              value={editForm.relationship}
+              onChangeText={(text) => handleEditFormChange("relationship", text)}
+            />
+            
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Health Conditions (comma separated)"
+              value={editForm.healthConditions}
+              onChangeText={(text) => handleEditFormChange("healthConditions", text)}
+              multiline
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveEditedMember}
+              >
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -503,55 +695,93 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  memberCard: {
-    flexDirection: 'row',
+  tableContainer: {
     backgroundColor: 'white',
-    padding: 15,
     borderRadius: 10,
-    marginBottom: 10,
-    alignItems: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  memberImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#7226ff',
+    padding: 12,
   },
-  memberInfo: {
+  headerColumn: {
     flex: 1,
   },
-  memberName: {
-    fontSize: 16,
+  headerColumnText: {
+    color: 'white',
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
-  },
-  memberDetails: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
   },
-  healthConditions: {
-    fontSize: 12,
-    color: '#7226ff',
-    fontStyle: 'italic',
+  healthColumn: {
+    flex: 1.5,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  column: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  columnText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  actionsColumn: {
+    width: 80,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  smallEditButton: {
+    padding: 6,
+    backgroundColor: '#e6f2ff',
+    borderRadius: 4,
   },
   deleteButton: {
-    padding: 8,
+    padding: 6,
+    backgroundColor: '#ffe6e6',
+    borderRadius: 4,
   },
-  emptyText: {
-    textAlign: 'center',
+  emptyTable: {
+    backgroundColor: 'white',
+    padding: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  emptyTableText: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#666',
-    marginTop: 20,
-    fontSize: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyTableSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
   prescriptionsSection: {
     flex: 1,
@@ -598,11 +828,51 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  comingSoon: {
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 15,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
     textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  saveButton: {
+    backgroundColor: '#7226ff',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 
